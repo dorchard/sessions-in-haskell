@@ -1,0 +1,184 @@
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
+<html> <head>
+<title>Artifact for "Effects as sessions, sessions as effects"</title>
+</head>
+
+<style type='text/css'>
+blockquote.prompt {
+ background-color:#eee;
+ padding:10px;
+}
+
+blockquote.info {
+ background-color:#d0dddf;
+ padding:10px;
+}
+
+pre {
+ padding:0px;
+ margin:0px;
+}
+
+p {
+font-size:11pt;
+}
+</style>
+
+<body>
+<h1>Artifact for <i>Effects as sessions, sessions as effects</i> (<a href="sessions/popl16preprint.pdf">preprint PDF</a>)</h1>
+<h3>Dominic Orchard, Nobuko Yoshida (Imperial College London)</h3>
+
+<p>
+Effect and session type systems are two expressive behavioural type
+systems. The former is usually developed in the context of the
+lambda-calculus and its variants, the latter for the pi-calculus.  In
+our paper we explored their relative expressive power.  Firstly, we
+gave an embedding from PCF, augmented with a parameterised effect
+system, into a session-typed pi-calculus (session calculus), showing
+that session types are powerful enough to express effects.  Secondly,
+we gave a reverse embedding, from the session calculus back into PCF,
+by instantiating PCF with concurrency primitives and its effect system
+with a session-like effect algebra (Section 6).  The embedding of session types
+into an effect system is leveraged to give an implementation of
+session types in Haskell, via an effect system encoding (Section
+7). <b>This is the artifact of this paper</b>, provided as the
+<i>effect-sessions</i> library.</p>
+
+<p>
+Section 6 and 7
+are the relevant parts of the paper for the artifact. As explained in
+Section 7, the implementation is not explicitly designed to be a
+user-friendly interface for programming with sessions. Instead, it is
+a fairly direct rendering in Haskell of the encoding of Section 6.
+Its aim is to give credance to embedding of Section 6 and to
+provide a new basis for working with session types in
+Haskell-- but is not a full "end product" in terms of user programming.
+</p>
+
+<p>
+<b>Limitations</b>. There are a number of limitations in the implementation
+due to the limits of Haskell compared with the variant of PCF in Section 6.
+Mainly, Haskell has no subtyping or equirecursive types. The former is solved
+via explicit subtyping combinators in Haskell. The latter (equirecursive types)
+is solved via restricted forms of recursion, with fixed-points computed at the
+type-level only for affine effect equations. In practice, this covers a multitude
+of examples.
+</p>
+<hr>
+
+<h2>Instructions</h2>
+
+<ul>
+
+<li>Ensure you have GHC (Glasgow Haskell Compiler) of at least version <b>7.8.1</b>.
+   <blockquote class="info">
+  The latest version of GHC (7.10.2) 
+  can be downloaded as part of the <a href="https://www.haskell.org/platform/">Haskell Platform</a>
+   for Windows, Linux, or Mac OS X.<br /><br />
+  To upgrade an existing Haskell Platform for Linux, there are good instructions <a href="https://www.haskell.org/downloads/linux">here</a> (tested for Ubuntu). 
+</blockquote>
+  </li>
+
+<li>Install the <i>stm</i> package:
+
+  <blockquote class="prompt">
+  <pre>
+   cabal install stm</pre>
+  </blockquote>
+</li>
+
+<li><a href="sessions/source.zip">Download and unzip the library sources</a>
+  <blockquote class="info">
+  The library also relies on the <i>effect-monad</i> and <i>type-level-sets</i> libraries.
+     The relevant files from these are included with the download here for ease of use.
+The files comprising the contribution of the artifact are:
+   <blockquote class="prompt">
+   <pre>
+   Control/Effect/Sessions.hs
+   Control/Effect/Sessions/Process.lhs
+   Control/Effect/Sessions/Operations.lhs
+   Data/Type/FiniteMap.lhs
+   examples.lhs
+   effect-sessions.cabal</pre>
+   </blockquote>
+  </blockquote>
+  </li>
+
+<li>The <tt>examples.lhs</tt> file in the top-level directory
+  provides a tutorial-like set of examples showing how to use
+the library. Open this in GHC interactive mode via:
+
+<blockquote class='prompt'>
+<pre>
+$ ghci examples.lhs
+...
+Main*></pre>
+</blockquote>
+Then you are ready to try examples (by using <tt>run</tt>) and examine the types (e.g., executing
+  <tt>:t simpleServer</tt>). Please follow the material in <tt>examples.lhs</tt>, which is a Literate Haskell file.
+  This complements and expands on Section 7 of the paper. 
+</li>
+</ul>
+
+<h2>Documentation</h2>
+
+<ul><li>The library has full Haddock <a href="sessions/doc/html/effect-sessions/index.html">documentation here</a>.
+  Most useful is the documentation for <a href="sessions/doc/html/effect-sessions/Control-Effect-Sessions-Operations.html">Control.Effect.Sessions.Operations</a> which explains
+  each combinator provided by the library for concurrency.</li>
+  <li>The main <tt>examples.lhs</tt> provides tutorial.</li>
+  </ul>
+
+<h2>Troubleshooting</h2>
+  If experiencing problems running the <tt>examples.lhs</tt>, try running <tt>cabal configure</tt> in
+  the top-level directory which should explain more clearly any missing dependencies in your Haskell
+  setup.<br /><br />
+  
+  Whilst experimenting the library, the programmer may encounter some harder to read errors.
+  This is a shortcoming of GHC type-level programming: it is hard to get good domain-specific errors.
+  The following provides some hints.<br />
+  <ul><li>A common cause of errors is not naming channels. Channels should be named whenever there is more than
+    one channel being used in a computation block. If two endpoints of a channel are being bound
+    in <tt>new</tt> then only one needs to be named. </li>
+    <li>Occasionally, extra type annotations are needed on primitive types to restrict them from polymorphic
+    to monomorphic instances. e.g., write <tt>(x :: Int) <- recv c</tt> instead of just <tt>x <- recv c</tt>.</li>
+    <li>Check that the error isn't an expected error: e.g., the types of the process don't match up, or
+    a balancing check fails, e.g. <tt>NotBal (Bal s)</tt>.
+    </li>
+
+    </ul>
+  
+<h2>Notes</h2>
+  
+   <ul>
+    <li><i>effect-sessions</i> has been tested on the following architectures/versions:
+      <ul><li>Mac OS X 10.9.5: GHC 7.8.2 and GHC 7.10.1</li>
+	  <li>Windows 7, GHC 7.10.2</li>
+	  <li>Ubuntu 15.04, GHC 7.10.2</li>
+       </ul>
+
+     <li><i>effect-sessions</i> relies on the <i>effect-monad</i> and <i>type-level-sets</i> libraries.
+     These are included with the download here for ease of use. These can also be installed via
+     cabal (<tt>cabal install effect-monad</tt>, <tt>cabal install type-level-sets</tt>).</li></ul>
+
+    <ul><li><i>effect-sessions</i> itself can be installed
+      (though this isn't necessary for experimenting with the examples) via:
+ <blockquote class='prompt'>
+ <pre>
+ cabal configure
+ cabal build
+ cabal install
+ </pre>
+      </blockquote>
+      Depending on your setup, the last command 'cabal install' may require super-user privileges.
+      </li>
+    </ul>
+
+ <h2>Acknowledgments</h2>
+
+    Thanks to Julien Lange and Bernardo Toninho for their comments and testing. Any remaining issues
+    are my own. 
+   
+<hr>
+<address></address>
+<!-- hhmts start --> Last modified: Tue Oct 13 12:28:40 BST 2015 <!-- hhmts end -->
+</body> </html>
