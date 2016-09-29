@@ -1,8 +1,8 @@
 This file defines effectful operations which encode the core operations
 of the (session type) pi-calculus.
 
-> {-# LANGUAGE TypeOperators, DataKinds, GADTs, RankNTypes, FlexibleInstances, 
->               MultiParamTypeClasses, FlexibleContexts, IncoherentInstances, 
+> {-# LANGUAGE TypeOperators, DataKinds, GADTs, RankNTypes, FlexibleInstances,
+>               MultiParamTypeClasses, FlexibleContexts, IncoherentInstances,
 >               TypeFamilies, MagicHash, UnboxedTuples, ConstraintKinds #-}
 
 > module Control.Effect.Sessions.Operations where
@@ -26,7 +26,7 @@ of the (session type) pi-calculus.
 
 > {-| Lift IO computations to a process -}
 > liftIO :: IO a -> Process '[] a
-> liftIO = Process 
+> liftIO = Process
 
 > {-| Print to stdout in a process -}
 > print :: Show a => a -> Process '[] ()
@@ -55,14 +55,14 @@ a session where any mention to 'Ch c' or 'Op c' is removed:
 
 > {-| Create a new channel and pass its two endpoints to the supplied continuation
 >      (the first parameter). This channel is thus only in scope for this continuation -}
-> new :: (Duality env c) 
->           =>  ((Chan (Ch c), Chan (Op c)) -> Process env t) 
+> new :: (Duality env c)
+>           =>  ((Chan (Ch c), Chan (Op c)) -> Process env t)
 >           ->  Process (env :\ (Op c) :\ (Ch c)) t
 > new f = Process $ C.newChan >>= (\c -> getProcess $ f (MkChan c, MkChan c))
 
 > {-| Parallel compose two processes, if they contain balanced sessions -}
-> par :: (BalancedPar env env') => 
->         Process env () -> Process env' () -> Process (DisjointUnion env env') () 
+> par :: (BalancedPar env env') =>
+>         Process env () -> Process env' () -> Process (DisjointUnion env env') ()
 > par (Process x) (Process y) =  Process $ do res <- newEmptyTMVarIO
 >                                             res' <- newEmptyTMVarIO
 >                                             Conc.forkIO $ (x >>= (atomically . (putTMVar res)))
@@ -77,7 +77,7 @@ a session where any mention to 'Ch c' or 'Op c' is removed:
 >             AllBal ((c :-> s) ': env) = (c :-> Bal s) ': (AllBal env)
 
 > {-| Output a channel (dual to a replicated input) -}
-> rsend :: Chan c -> Chan d -> Process '[c :-> (Delg s) :*! End, d :-> Bal s] () 
+> rsend :: Chan c -> Chan d -> Process '[c :-> (Delg s) :*! End, d :-> Bal s] ()
 > rsend (MkChan c) t = Process $ C.writeChan (unsafeCoerce c) t
 
 Channels can then be sent and received with the 'chSend' and 'chRecv' primitives:
@@ -90,28 +90,28 @@ Channels can then be sent and received with the 'chSend' and 'chRecv' primitives
 
  chRecv :: Chan c -> (Chan d -> Process env a) ->
             Process (UnionSeq '[c :-> (Delg (env :@ d)) :? (env :@ c)] (env :\ d)) a
- chRecv (MkChan c) f = Process $ C.readChan (unsafeCoerce c) >>= 
+ chRecv (MkChan c) f = Process $ C.readChan (unsafeCoerce c) >>=
                                      (getProcess . f . unsafeCoerce)
 
 > chRecv :: Chan c -> Process '[c :-> (Delg (env :@ d)) :? End]
 >                         ((Chan d -> Process env a) -> Process (env :\ d) a)
-> chRecv (MkChan c) = Process $ return $ 
->                                \f -> let y = (C.readChan (unsafeCoerce c) >>= 
+> chRecv (MkChan c) = Process $ return $
+>                                \f -> let y = (C.readChan (unsafeCoerce c) >>=
 >                                                      (getProcess . f . unsafeCoerce))
 >                                      in Process $ y
 
 
 Given a channel 'c', and a computation which binds channel 'd' to produces behaviour
 'c', then this is provided by receiving 'd' over 'c'. Thus the resulting computation
-is the union of 'c' mapping to the session type of 'd' in the session environment 
-'s', composed with the 's' but with 'd' deleted (removed). 
+is the union of 'c' mapping to the session type of 'd' in the session environment
+'s', composed with the 's' but with 'd' deleted (removed).
 
 ------------------------------------------------------
 
 Subeffecting instances for the least-upper bound :+ operator and for extending
-an environment with a closed session channel, i.e. with c :-> End. 
+an environment with a closed session channel, i.e. with c :-> End.
 
-> instance Subeffect Process env env' => 
+> instance Subeffect Process env env' =>
 >          Subeffect Process ((c :-> s) ': env) ((c :-> s :+ t) ': env') where
 >     sub (Process p) = Process p
 
@@ -122,11 +122,11 @@ an environment with a closed session channel, i.e. with c :-> End.
 > instance Subeffect Process env env where
 >     sub = id
 
-> instance Subeffect Process env env' => 
+> instance Subeffect Process env env' =>
 >          Subeffect Process ((c :-> s) ': env) ((c :-> s) ': env') where
 >     sub (Process p) = Process p
 
-> instance Subeffect Process env env' => 
+> instance Subeffect Process env env' =>
 >          Subeffect Process env ((c :-> End) ': env') where
 >     sub (Process p) = Process p
 
@@ -153,10 +153,10 @@ and subtyping on the right of a conditional
 
 
 > {-| Recursion combinator for recursive functions which have an affine fixed-point
->     equation on their effects. 
+>     equation on their effects.
 >       For example, if 'h ~ (Seq h a) :+ b' then 'ToFix h = Fix a b,'
 >    -}
-> affineFix :: ((a -> Process '[c :-> Star] b) 
+> affineFix :: ((a -> Process '[c :-> Star] b)
 >           -> (a -> Process '[c :-> h] b))
 >           -> a -> Process '[c :-> ToFix h] b
 > affineFix f x = let (Process p) = f (\x' -> let (Process y) = affineFix f x' in Process y) x

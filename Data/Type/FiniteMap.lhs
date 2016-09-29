@@ -1,18 +1,18 @@
 This module provides type-level finite maps.
 The implementation is similar to that shown in the paper.
- "Embedding effect systems in Haskell" Orchard, Petricek 2014 
+ "Embedding effect systems in Haskell" Orchard, Petricek 2014
 
-> {-# LANGUAGE TypeOperators, PolyKinds, DataKinds, KindSignatures, 
->              TypeFamilies, UndecidableInstances, MultiParamTypeClasses, 
+> {-# LANGUAGE TypeOperators, PolyKinds, DataKinds, KindSignatures,
+>              TypeFamilies, UndecidableInstances, MultiParamTypeClasses,
 >              FlexibleInstances #-}
 
-> module Data.Type.FiniteMap (Union, DisjointUnion, Map(..), 
+> module Data.Type.FiniteMap (Union, DisjointUnion, Map(..),
 >                             Lookup, Member, Combine, Cmp, (:\), (:++)) where
 
 > import Data.Type.Set hiding (X, Y, Z, (:->), Nub, Union, Append)
 
 > -- Mappings
-> infixr 4 :-> 
+> infixr 4 :->
 > data Map k v = k :-> v
 
 Throughout, type variables

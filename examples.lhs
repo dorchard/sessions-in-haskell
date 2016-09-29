@@ -1,34 +1,36 @@
 This document is a tutorial with various examples for using the
 'Session types as an effect system' encoding, translated into Haskell,
-provided by our Control.Effect.Session library. 
+provided by our Control.Effect.Session library.
 
-The internals of the library can be explored in: 
+The internals of the library can be explored in:
     Control/Effect/Sessions.hs
     Control/Effect/Sessions/Process.lhs
     Control/Effect/Sessions/Operations.lhs
-Or via the haddock documentation at: 
+Or via the haddock documentation at:
    http://www.doc.ic.ac.uk/~dorchard/sessions/doc/html/effect-sessions/Control-Effect-Sessions.html
 
 Note that all the examples here have session types (embedded in effect types)
 that are inferred by GHC (given only some type signatures to name channels). This
-inference reduces programmer effort and eases development and verification. 
+inference reduces programmer effort and eases development and verification.
 
 ****** Setup
 
-First, some language extensions and modules are required: 
+First, some language extensions and modules are required:
 
-> {-# LANGUAGE RebindableSyntax, DataKinds, TypeOperators, GADTs, ScopedTypeVariables, 
->              FlexibleInstances, FlexibleContexts #-} 
+> {-# LANGUAGE RebindableSyntax, DataKinds, TypeOperators, GADTs, ScopedTypeVariables,
+>              FlexibleInstances, FlexibleContexts #-}
 
-> import Prelude hiding (Monad(..), print, putStrLn) -- hide the usual Monad 
+> import Prelude hiding (Monad(..), print, putStrLn) -- hide the usual Monad
 > import Control.Effect.Sessions                     -- our library
 
-The 'Msg' data type will be used throughout. 
+> import GHC.Exts (Constraint)
+
+The 'Msg' data type will be used throughout.
 
 > data Msg = Ping | Pong deriving Show
 
 All the examples from this file can be run in one go from here
-to get their outputs. 
+to get their outputs.
 
 > main = run $
 >         do putStrLn "Running all examples in this file...\n"
@@ -67,13 +69,13 @@ $ ghci examples.lhs
  Main*>
 
 Depending on your system, you might get an output that overlaps
-the output message with the prompt message, e.g. 
+the output message with the prompt message, e.g.
 
  Main*> run simple
  "ReMain*>cieved: Hello"
 
 This is normal: it is a result of the process 'simple' running in parallel
-with GHCi and interleaving output to the console. 
+with GHCi and interleaving output to the console.
 
 This example combines three elements: sending/receiving, 'new'
 channels, and 'parallel composition' via 'par. The session types of
@@ -107,7 +109,7 @@ name these with additional type signatures. Here's an example.
 >                 do x <- recv c
 >                    send d (x + 1)
 
-> incClient (c :: Chan (Op "c")) (d :: (Chan (Op "d"))) = 
+> incClient (c :: Chan (Op "c")) (d :: (Chan (Op "d"))) =
 >                 do send c 42
 >                    x <- recv d
 >                    putStrLn $ "Got " ++ show x
@@ -120,7 +122,7 @@ part of the encoding due to Haskell limitations [aside: existentials could
 be used for (fresh) names, but this does not interact well with the type-level
 encoding of finite maps].
 
-These two processes are then composed via: 
+These two processes are then composed via:
 
 > incProc = new $ \(c, c') -> new $ \(d, d') -> incServer c d `par` incClient c' d'
 
@@ -154,10 +156,10 @@ checking duality of their usage in the parameter process:
      ((Chan ('Ch c), Chan ('Op c)) -> Process env a)
      -> Process ((env :\ 'Op c) :\ 'Ch c) a
 
-That is, check that "Ch c" and "Op c" are dual in "env" (lookup is via ':@') and then 
+That is, check that "Ch c" and "Op c" are dual in "env" (lookup is via ':@') and then
 in the returned process, remove them from the environment (via ':\'). 'DualP' is a
-binary predicate (relation) for duality of session types (defined in 
-Control.Effect.Sessions.Process). 
+binary predicate (relation) for duality of session types (defined in
+Control.Effect.Sessions.Process).
 
 ****** Delegation
 
@@ -169,8 +171,8 @@ which receives a channel 'd' on 'c', and then sends a 'Ping' on it:
 
 > serverD (c :: (Chan (Ch "c"))) = do chRecvSeq c (\(d :: Chan (Ch "x")) -> send d Ping)
 
-Note, the variable name 'd' and the channel name 'Ch "x"' do not have to match. 
-[chRecvSeq is a simplified version of chRecv] 
+Note, the variable name 'd' and the channel name 'Ch "x"' do not have to match.
+[chRecvSeq is a simplified version of chRecv]
 
 The type of 'serverD' is inferred as:
 
@@ -178,20 +180,20 @@ The type of 'serverD' is inferred as:
        -> Process '['Ch "c" ':-> ('Delg (Msg ':! 'End) ':? 'End)] ()
 
 This explains that along the channel we receive a delegated session channel
-on which a 'Msg' can be sent. 
+on which a 'Msg' can be sent.
 
 We then define a client to interact with this that binds d (and its dual d'),
-then sends d over c and waits to receive a ping on d'. 
+then sends d over c and waits to receive a ping on d'.
 
-> clientD (c :: Chan (Op "c")) = 
->        new (\(d :: (Chan (Ch "d")), d') -> 
+> clientD (c :: Chan (Op "c")) =
+>        new (\(d :: (Chan (Ch "d")), d') ->
 >                              do  chSend c d
 >                                  Ping <- recv d'
 >                                  putStrLn "Client got a ping")
 
 > simpleDelg = new $ \(c, c') -> serverD c `par` clientD c'
 
-Let's examine the type of |clientD|: 
+Let's examine the type of |clientD|:
 
  *Main> :t clientD
   clientD
@@ -208,32 +210,32 @@ by 'new'.
 Here is Example 4 exactly as it appears in the paper (which is similar to
 the above example):
 
-> client (c :: (Chan (Ch "c"))) 
->    = new (\(d :: (Chan (Ch "d")), d') -> 
+> client (c :: (Chan (Ch "c")))
+>    = new (\(d :: (Chan (Ch "d")), d') ->
 >                   do  chSend c d
 >                       Ping <- recv d'
 >                       print "Client: got a ping")
-> 
+>
 > server c = do { k <- chRecv c; k (\x -> send x Ping) }
 > process = new (\(c, c') -> (client c) `par` (server c'))
-> 
+>
 
  Main*> run process
  "Client got a ping"
 
 Here's a slight variation, combining value and delegation communication.
 
-> clientV (c :: (Chan (Ch "c"))) 
->    = new (\(d :: (Chan (Ch "d")), d') -> 
+> clientV (c :: (Chan (Ch "c")))
+>    = new (\(d :: (Chan (Ch "d")), d') ->
 >                   do  chSend c d
 >                       send c Ping
 >                       Ping <- recv d'
 >                       print "Client: got a ping")
-> 
-> serverV c = do k <- chRecv c 
+>
+> serverV c = do k <- chRecv c
 >                k (\(x :: Chan (Ch "x")) -> do Ping <- recv c
 >                                               send x Ping)
->               
+>
 > processV = new (\(c, c') -> (client c) `par` (server c'))
 
 ****** Alternation
@@ -242,7 +244,7 @@ The usual 'case' and 'if' constructs of Haskell can be used, but since
 Haskell does not have subtyping, any subeffecting that would occur in
 fPCF must be inserted explicitly via the 'sub' combinator. There are a
  number of specialised variants provided by the library for common cases
-of subeffecting: 
+of subeffecting:
 
   subL :: Process '[c :-> s] a -> Process '[c :-> s :+ t] a
   subR :: Process '[c :-> t] a -> Process '[c :-> s :+ t] a
@@ -253,7 +255,7 @@ effect type and 'subEnd' essentially provides a kind of weakening.
 
 The following shows an example:
 
-> condServer (c :: (Chan (Ch "x"))) = 
+> condServer (c :: (Chan (Ch "x"))) =
 >                  do (l :: Int) <- recv c
 >                     case l of 0 -> subL $ send c True
 >                               n -> do (x :: Bool) <- subR $ recv c
@@ -271,11 +273,11 @@ of the server explains this protocol:
 
 This is then composed in parallel with a dual client to make 'condProc'
 
-> condClient c' = do send c' (0 :: Int) 
+> condClient c' = do send c' (0 :: Int)
 >                    case 0 of 0 -> do { (x :: Bool) <- subL $ recv c'; print x }
 >                              n -> subR $ send c' False
 
-> condProc = new (\(c :: (Chan (Ch "x")), c') -> 
+> condProc = new (\(c :: (Chan (Ch "x")), c') ->
 >                 (condServer c) `par` (condClient c'))
 
  *Main> run condProc
@@ -305,7 +307,7 @@ which for some channel 'c' and (encoded) process 'p', embeds
 '*c?(d).p', the replicated input of a channel 'd' along 'c', which is
 then bound in the scope of 'p'.
 
-> -- the type signature is not strictly necessary here, but is included for clarity 
+> -- the type signature is not strictly necessary here, but is included for clarity
 > repInp :: (Chan (Ch "c")) -> (Chan (Ch "d") -> Process '[Ch "d" :-> s] ())
 >                           -> (Process '[Ch "c" :-> Fix (Int :? ((Delg s) :? Star)) (Int :? End)] ())
 > repInp c p = affineFix (\f -> \() ->
@@ -323,14 +325,14 @@ ability to implicitly insert subeffecting casts.
 For example, we might have a server that repeatedly receives and
 prints a message using the recursive 'repInp' process above.
 
-> serverA (c :: (Chan (Ch "c"))) = 
+> serverA (c :: (Chan (Ch "c"))) =
 >     repInp c (\(d :: (Chan (Ch "d"))) -> do (x :: Msg) <- recv d
 >                                             print x)
 
 A number of clients can then have some finite number of repeated
 interactions with the server.
 
-> clientA (c :: (Chan (Op "c"))) = new (\(d :: Chan (Ch "d"), d') -> 
+> clientA (c :: (Chan (Op "c"))) = new (\(d :: Chan (Ch "d"), d') ->
 >                                    do -- Send a ping
 >                                       send c (1 :: Int)
 >                                       rsend c d
@@ -356,8 +358,8 @@ the runtime for 7.10.1 and does not occur in GHC 7.8.* or GHC 7.10.2.]
 
 The following are some examples of processes which fail to type check, either as is,
 or when composed with 'run'. This is a good thing, because these processes
-are erroneous! The types are doing their job. 
-Uncomment them one at a time to see how they fail. 
+are erroneous! The types are doing their job.
+Uncomment them one at a time to see how they fail.
 
 * Non-dual behaviours
 
@@ -380,7 +382,7 @@ GHC reports:
 
   Could not deduce (DualP 'End ([Char] ':? 'End))
 
-Thus, we see that 'End (from the client) is not dual to the additional 
+Thus, we see that 'End (from the client) is not dual to the additional
 [Char] :? End operation of the server.
 
 * Unbalanced delegation behaviour.
@@ -408,7 +410,4 @@ This rejects the encoding of the non-deterministic pi-calculus term above:
 > --badProc = new (\(c, c') -> badServer c `par` (send c' True))
 
 If just 'badServer' is uncommented, we see in its type the unsatisfiable constraint
-of NotBal (Bal (a :? End)). When both are uncommented this error arises directly. 
-
-
-
+of NotBal (Bal (a :? End)). When both are uncommented this error arises directly.
