@@ -1,0 +1,27 @@
+name:                   effect-sessions
+version:                1.0
+synopsis:               Sessions and session types for Concurrent Haskell
+description:		Provides an implementation of sessions ontop
+                        of Concurrent Haskell, where session types are
+			effect types via effect-monad. 
+
+copyright:              2015 Imperial College London
+author:                 Dominic Orchard, Nobuko Yoshida
+stability:              experimental
+build-type:             Simple
+cabal-version:          >= 1.6
+tested-with:            GHC >= 7.8.1
+
+exposed-modules:        Control.Effect.Sessions.Process,
+                        Control.Effect.Sessions, 
+                        Control.Effect.Sessions.Operations, 
+                        Data.Type.FiniteMap
+
+build-depends:          base < 5,
+                        ghc-prim,
+                        effect-monad,
+			stm > 2.4, 
+ 			type-level-sets
+
+
+--  ghc-options:          -fglasgow-exts
