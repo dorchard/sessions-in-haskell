@@ -126,10 +126,10 @@ class Subset s t where
 instance Subset '[] '[] where
    subset xs = Empty
 
-instance Subset '[] (x ': t) where
+instance {-# OVERLAPPABLE #-} Subset '[] (x ': t) where
    subset xs = Empty
 
-instance Subset s t => Subset (x ': s) (x ': t) where
+instance {-# OVERLAPS #-} Subset s t => Subset (x ': s) (x ': t) where
    subset (Ext x xs) = Ext x (subset xs)
 
 
@@ -202,13 +202,13 @@ instance (Show (Var k), Show v) => Show (k :-> v) where
 instance Show (Var "x") where
     show X   = "x"
     show Var = "Var"
-instance Show (Var "y") where
+instance {-# OVERLAPS #-} Show (Var "y") where
     show Y   = "y"
     show Var = "Var"
-instance Show (Var "z") where
+instance {-# OVERLAPS #-} Show (Var "z") where
     show Z   = "z"
     show Var = "Var"
-instance Show (Var v) where
+instance {-# OVERLAPS #-} Show (Var v) where
     show _ = "Var"
 
 {-| Symbol comparison -}
